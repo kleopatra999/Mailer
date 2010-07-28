@@ -1,3 +1,76 @@
-Mailer Version 1.0
+Mailer Version 1.0 - http://github.com/Austinb/Mailer
+Kohana 3 module - http://kohanaframework.org
 
-Creating new readme with examples so bear with me.
+Requires Swiftmailer - http://github.com/swiftmailer/swiftmailer
+
+Mailer is meant to be loaded as a module defined in the bootstrap.php file.
+You can pull the Mailer module as a git submodule using "git submodule add git://github.com/Austinb/Mailer.git modules/mailer". Otherwise just check it out as a stand alone git repo so you can pull updates as you need to.
+
+For more detailed information and setup examples check out the Mailer wiki: http://wiki.github.com/Austinb/Mailer/
+
+Quick Installation:
+1. To enable the mailer module (after you downloaded it to modules/mailer) add the following: 'mailer' => MODPATH.'mailer', // Mailer to the Kohana::modules() call.
+
+2. Once you have the module being loaded copy the modules/mailer/config/mailer.php to application/config/mailer.php and edit to suit your needs.
+
+3. Create a class that extends the Mailer class and save it as application/classes/mailer/class_name.php.  The example below you would save as application/classes/mailer/test.php
+
+<?php defined('SYSPATH') or die('No direct script access.');
+
+class Mailer_Test extends Mailer {
+
+	public function __construct()
+	{
+		// Set the config email settings we wish to load.  This must be defined in the config/mailer.php file.
+		$this->account = 'default';
+
+		// Construct the parent.
+		parent::__construct();
+	}
+
+	public function welcome($to, $args=array())
+	{
+		$this->to 			= $to;
+		$this->bcc			= array('admin@yourdomain.com' => 'Admin');
+		$this->from 		= array('theteam@youdomain.com' => 'The Team'); // Email address should be same as account for junk mail reasons.
+		$this->subject		= 'Welcome!';
+		$this->attachments	= array('/path/to/file/file.txt', '/path/to/file/file2.txt');
+		$this->body_data 	= $args;
+	}
+}
+
+4. Create a view for the new class and save it as application/views/mailer/class_name/method_name.php.
+For the example above and the example view below you would save it as application/views/mailer/test/welcome.php.
+
+<p>Welcome <?= $user['name']; ?>,</p>
+
+<p>We are glad you signed up for our web app.  Hope you enjoy.</p>
+
+<p>The Team</p>
+
+5. Now just add a call to the mailer class as part of one of your controllers.  Example of mailing welcome email message to new user.
+
+public function action_register()
+{
+	...
+
+	if($_POST)
+	{
+		$post = new Validate($_POST)->more rules, etc...
+
+		// Do register stuff here.
+		....
+
+		// Now lets email the user a welcome message.
+		try {
+			Mailer::factory('default')->send_reset(array('useremail@domain.com' => 'Tom'),
+				array('user' => array('name' => 'Tom'))
+			);
+
+		} catch (MailerException $e) {
+			$post->error('send_mail', 'Unable to email welcome message.');
+		}
+
+		$content->errors = $post->errors();
+	}
+}
