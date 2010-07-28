@@ -2,6 +2,10 @@
 
 class Mailer {
 
+	// Release version and codename
+	const VERSION  = '1.0.0';
+	const CODENAME = 'phoenix';
+
 	/**
 	 * The constant for the default string used to identify with account is default.
 	 *
@@ -109,14 +113,14 @@ class Mailer {
 	protected function getEmailAccount()
 	{
 		// We have multiple accounts.
-		if(count($this->config) > 1)
+		if(count($this->config['accounts']) > 1)
 		{
 			// @todo: Code this logic and add multiple logic options such as random, in-order, time of day, etc.
-			return $this->config[0];
+			return $this->config['accounts'][0];
 		}
 		else // We only have one account defined, easy enough.
 		{
-			return $this->config[0];
+			return $this->config['accounts'][0];
 		}
 	}
 
@@ -221,7 +225,7 @@ class Mailer {
 
 		if(isset($options['replyto']) && is_array($options['replyto']))
 		{
-			$this->from = $options['replyto'];
+			$this->replyto = $options['replyto'];
 		}
 
 		//Create the Mailer using the appropriate transport

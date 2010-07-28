@@ -20,15 +20,17 @@
 return array
 (
 	'default' => array( // Array of default mailer(s), can use multiple accounts for same section.
-		array(
-			'transport'	=> 'smtp',
-			'hostname'	=> 'localhost',
-			'username'	=> 'fakeuser@localhost',
-			'password'	=> 'fakepw',
-			'port'		=> 25,
-			'encryption'=> false,
-			'from' 	=> array('fakeuser@localhost' => 'Default Mailer'),
-			'replyto' 	=> array('fakeuser@localhost' => 'Default Mailer'),
+		'accounts' => array(
+			array(
+				'transport'	=> 'smtp',
+				'hostname'	=> 'localhost',
+				'username'	=> 'fakeuser@localhost',
+				'password'	=> 'fakepw',
+				'port'		=> 25,
+				'encryption'=> false,
+				'from' 	=> array('fakeuser@localhost' => 'Default Mailer'), // Best to use same email address as the account.
+				'replyto' 	=> array('fakeuser@localhost' => 'Default Mailer'),
+			),
 		),
 	),
 );
