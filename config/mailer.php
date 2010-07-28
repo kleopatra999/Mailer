@@ -11,9 +11,9 @@
  * To enable SSL, set "encryption" to "ssl".
  *
  * Transport options:
- * @param   null  	native: no options
- * @param   string  sendmail:
- * @param   array   smtp: hostname, username, password, port, encryption (optional), sendfrom  (optional), replyto  (optional)
+ * @param   null  	native: from (optional), replyto (optional)
+ * @param   string  sendmail: cmd (optional), from (optional), replyto (optional)
+ * @param   array   smtp: hostname, username, password, port, encryption (optional), from (optional), replyto (optional)
  *
  */
 

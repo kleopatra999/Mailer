@@ -26,18 +26,18 @@ class Mailer {
 	 *
 	 * @var array
 	 */
-	protected $valid_transports				= array('smtp', 'sendmail', 'mail');
+	protected $valid_transports = array('smtp', 'sendmail', 'mail');
 
-	protected $_class_name					= null;
+	protected $_class_name 	= null;
 
-	protected $_mailer 						= null;
+	protected $_mailer  = null;
 
 	/**
 	 * The command to use for sendmail.  If null will use the default one from swift.
 	 *
 	 * @var string
 	 */
-	protected $sendmail_cmd					= null;
+	protected $sendmail_cmd 	= null;
 
 	/**
 	 * Decide if we should fall back to the default account if we are unable to find a specific account as defined in
@@ -45,56 +45,56 @@ class Mailer {
 	 *
 	 * @var bool
 	 */
-	protected $default_fallback				= true;
+	protected $default_fallback = true;
 
 	/**
 	 * Which account to load.  If undefined or invalid the mailer will fall back to 'default'.
 	 *
 	 * @var string
 	 */
-	protected $account						= 'default';
+	protected $account = 'default';
 
 	/**
 	 * The object of the specific configuration loaded (i.e. default, accounts, etc...)
 	 *
 	 * @var Array
 	 */
-	protected $config						= null;
+	protected $config = null;
 
 	/**
 	 * The object of configurations as defined in config/mailer.php
 	 *
 	 * @var Kohana_Config_File Object
 	 */
-	protected $configs						= null;
+	protected $configs = null;
 
-	protected $message_type					= 'text/html';
+	protected $content_type = 'text/html';
 
-	protected $from							= null;
+	protected $from = null;
 
-	protected $replyto						= null;
+	protected $replyto = null;
 
-	protected $to							= null;
+	protected $to = null;
 
-	protected $cc							= null;
+	protected $cc = null;
 
-	protected $bcc							= null;
+	protected $bcc = null;
 
-	protected $subject						= null;
+	protected $subject = null;
 
-	protected $body_html					= null;
+	protected $body_html = null;
 
-	protected $body_text					= null;
+	protected $body_text = null;
 
-	protected $body_data					= null;
+	protected $body_data = null;
 
-	protected $attachments					= null;
+	protected $attachments = null;
 
-	protected $message						= null;
+	protected $message = null;
 
-	protected $batch_send					= false;
+	protected $batch_send = false;
 
-	protected $result						= null;
+	protected $result = null;
 
 
 	public function __construct($config = null)
@@ -151,7 +151,7 @@ class Mailer {
 		if (!class_exists('Swift', false))
 		{
 			// Load SwiftMailer Autoloader
-			require_once Kohana::find_file('vendor', 'swift/swift_required');
+			require_once Kohana::find_file('vendor', 'swiftmailer/lib/swift_required');
 		}
 
 		// Load up the defined configuration
@@ -197,6 +197,7 @@ class Mailer {
 		switch ($options['transport'])
 		{
 			case 'smtp':
+				// Create SMTP transport
 				$transport = Swift_SmtpTransport::newInstance(
 							$options['hostname'],
 							(empty($options['port']) ? 25 : (int) $options['port']),
@@ -206,11 +207,12 @@ class Mailer {
 			break;
 
 			case 'sendmail':
-				$transport = Swift_SendmailTransport::newInstance($this->sendmail_cmd);
+				// Create Sendmail transport, but can use postfix as well.
+				$transport = Swift_SendmailTransport::newInstance((isset($options['cmd']) && !empty($options['cmd']))?$options['cmd']:null);
 			break;
 
 			case "mail":
-			default: // Uses PHP's mail()er
+			default: // Create native transport, uses PHP's mail()er
 				$transport = Swift_MailTransport::newInstance();
 			break;
 		}
@@ -301,7 +303,7 @@ class Mailer {
 		$this->message = Swift_Message::newInstance($this->subject);
 
 		//do we need to process the HTML?
-		if ($this->message_type == 'text/html' OR $this->message_type == 'multipart/alternative')
+		if ($this->content_type == 'text/html' OR $this->content_type == 'multipart/alternative')
 		{
 			//has it already been set?
 			if ($this->body_html === null)
