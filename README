@@ -63,7 +63,7 @@ public function action_register()
 
 		// Now lets email the user a welcome message.
 		try {
-			Mailer::factory('default')->send_reset(array('useremail@domain.com' => 'Tom'),
+			Mailer::factory('test')->send_welcome(array('useremail@domain.com' => 'Tom'),
 				array('user' => array('name' => 'Tom'))
 			);
 
