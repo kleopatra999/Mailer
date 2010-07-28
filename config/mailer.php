@@ -12,20 +12,24 @@
  *
  * Transport options:
  * @param   null  	native: no options
- * @param   string  sendmail: 
- * @param   array   smtp: hostname, username, password, port, encryption (optional)
+ * @param   string  sendmail:
+ * @param   array   smtp: hostname, username, password, port, encryption (optional), sendfrom  (optional), replyto  (optional)
  *
  */
 
 return array
 (
-	'transport'	=> 'smtp',
-	'options'	=> array
-					(
-						'hostname'	=> 'thewebapp.com',
-						'username'	=> 'mailer@thewebapp.com',
-						'password'	=> 'p@ssw0rd',
-						'port'		=> '25',
-					),
+	'default' => array( // Array of default mailer(s), can use multiple accounts for same section.
+		array(
+			'transport'	=> 'smtp',
+			'hostname'	=> 'localhost',
+			'username'	=> 'fakeuser@localhost',
+			'password'	=> 'fakepw',
+			'port'		=> 25,
+			'encryption'=> false,
+			'from' 	=> array('fakeuser@localhost' => 'Default Mailer'),
+			'replyto' 	=> array('fakeuser@localhost' => 'Default Mailer'),
+		),
+	),
 );
 
