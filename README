@@ -11,7 +11,7 @@ For more detailed information and setup examples check out the Mailer wiki: http
 Quick Installation:
 1. To enable the mailer module (after you downloaded it to modules/mailer) add the following: 'mailer' => MODPATH.'mailer', // Mailer to the Kohana::modules() call.
 
-2. Once you have the module being loaded copy the modules/mailer/config/mailer.php to application/config/mailer.php and edit to suit your needs.
+2. Once you have the module being loaded copy the modules/mailer/config/mailer.example to application/config/mailer.php and edit to suit your needs.
 
 3. Create a class that extends the Mailer class and save it as application/classes/mailer/class_name.php.  The example below you would save as application/classes/mailer/test.php
 
