@@ -20,6 +20,7 @@
 return array
 (
 	'default' => array( // Array of default mailer(s), can use multiple accounts for same section.
+		'logic' => 'default', // One of the following: default, timeofday
 		'accounts' => array(
 			array(
 				'transport'	=> 'smtp',

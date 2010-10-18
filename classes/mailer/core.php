@@ -1,24 +1,53 @@
 <?php defined('SYSPATH') or die('No direct script access.');
-
-class Mailer_Core {
+/**
+ * Core class
+ *
+ * Provides main functionality for Mailer.
+ *
+ * This file is part of Mailer.
+ *
+ * Mailer is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Mailer is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Mailer.  If not, see <http://www.gnu.org/licenses/>.
+ */
+abstract class Mailer_Core {
 
 	// Release version and codename
 	const VERSION  = '1.1';
 	const CODENAME = 'phoenix';
 
 	/**
-	 * The constant for the default string used to identify with account is default.
+	 * The constant for the default string used to identify with account
+	 * is default.
 	 *
 	 * @var string
 	 */
 	const SETTING_DEFAULT = 'default';
 
 	/**
-	 * The constant that references the settings key for the actual email accounts defined for a specific account.
+	 * The constant that references the settings key for the actual email
+	 * accounts defined for a specific account.
 	 *
 	 * @var string
 	 */
 	const SETTING_ACCOUNTS = 'accounts';
+
+	/*
+	 * Logic settings for the account selector
+	 */
+	const SETTING_LOGIC = 'logic';
+
+	const SETTING_LOGIC_DEFAULT = 'default'; // In order from top to bottom of the array
+	const SETTING_LOGIC_TIMEOFDAY = 'timeofday'; // Based on the time of day will switch to other accounts.
 
 	/*
 	 * Defined transports
@@ -38,7 +67,22 @@ class Mailer_Core {
 	 *
 	 * @var array
 	 */
-	protected $valid_transports = array(self::TRANSPORT_NATIVE, self::TRANSPORT_SENDMAIL, self::TRANSPORT_SMTP);
+	protected $valid_transports = array(
+		self::TRANSPORT_NATIVE,
+		self::TRANSPORT_SENDMAIL,
+		self::TRANSPORT_SMTP,
+	);
+
+	/**
+	 * Array of valid logic methods that can be used to resend failed
+	 * email attempts.
+	 *
+	 * @var array
+	 */
+	protected $valid_logic = array(
+		self::SETTING_LOGIC_DEFAULT,
+		self::SETTING_LOGIC_TIMEOFDAY,
+	);
 
 	protected $_class_name = null;
 
@@ -46,16 +90,19 @@ class Mailer_Core {
 
 	protected $_transport = null;
 
+	protected $_message = null;
+
 	/**
-	 * Decide if we should fall back to the default account if we are unable to find a specific account as defined in
-	 * config/mailer.php
+	 * Decide if we should fall back to the default account if we are unable to
+	 * find a specific account as defined in APPPATH/config/mailer.php
 	 *
 	 * @var bool
 	 */
 	protected $default_fallback = true;
 
 	/**
-	 * Which account to load.  If undefined or invalid the mailer will fall back to 'default'.
+	 * Which account to load.  If undefined or invalid the mailer will fall
+	 * back to 'default'.
 	 *
 	 * @var string
 	 */
@@ -76,12 +123,18 @@ class Mailer_Core {
 	protected $config = null;
 
 	/**
-	 * Send as a batch. Be careful enabling this as the email provider may have limits on the batch size and/or frequency.
+	 * Send as a batch. Be careful enabling this as the email provider may have
+	 * limits on the batch size and/or frequency.
 	 *
 	 * @var bool
 	 */
 	protected $batch_send = false;
 
+	/**
+	 * Holds the result from the mailing attempt.
+	 *
+	 * @var mixed
+	 */
 	protected $result = null;
 
 	/*
@@ -138,8 +191,9 @@ class Mailer_Core {
 		// Let's init baby
 		$this->init();
 
-		// Create the Mailer using the appropriate transport
-		return $this->_mailer = Swift_Mailer::newInstance($this->getTransport());
+		// Create the Mailer using a temp transport just to get this thing going.
+		// We will override this upon sending.
+		return $this->_mailer = Swift_Mailer::newInstance(Swift_MailTransport::newInstance());
 	}
 
 	/**
@@ -150,28 +204,25 @@ class Mailer_Core {
 		// Load up the swiftmailer class as it does not exist.
 		if (!class_exists('Swift', false))
 		{
-			// Load SwiftMailer Autoloader
+			// Load SwiftMailer Autoloader from vendor since it is a module
 			require_once Kohana::find_file('vendor', 'swiftmailer/lib/swift_required');
 		}
 
 		// Load up the APPPATH/config/mailer.php account settings.
 		$this->config = Kohana::config('mailer');
 
-		// Find an account to use.
-		$this->findAccount();
-
-		// Now create the transport.
-		$this->setTransport($this->makeTransport($this->getEmailAccount()));
+		// Find an account to use from the config file.
+		$this->findConfigAccount();
 
 		return true;
 	}
 
 	/**
-	 * Attempt to find the account we need to send from.
+	 * Attempt to find the account we need to load the mailer server(s) settings.
 	 *
 	 * @throws MailerException
 	 */
-	protected function findAccount()
+	protected function findConfigAccount()
 	{
 		// Try to load up the defined accounts.
 		if(isset($this->config->{$this->account}) && !empty($this->config->{$this->account}))
@@ -207,38 +258,11 @@ class Mailer_Core {
 	}
 
 	/**
-	 * Return the email account options from a set of accounts.
+	 * Determine if the account setting has multiple email accounts we can send from.
 	 */
-	protected function getEmailAccount()
+	protected function hasMultipleEmailAccounts()
 	{
-		// We have multiple accounts.
-		if(count($this->accounts[self::SETTING_ACCOUNTS]) > 1)
-		{
-			// @todo: Code this logic and add multiple logic options such as random, in-order, time of day, etc.
-			return $this->accounts[self::SETTING_ACCOUNTS][0];
-		}
-		else // We only have one account defined, easy enough.
-		{
-			return $this->accounts[self::SETTING_ACCOUNTS][0];
-		}
-	}
-
-	/**
-	 * Set the Swift transport to be used for mailing.
-	 *
-	 * @param Swift_Transport $transport
-	 */
-	protected function setTransport(Swift_Transport $transport)
-	{
-		return $this->_transport = $transport;
-	}
-
-	/**
-	 * Return the current Swift transport.
-	 */
-	protected function getTransport()
-	{
-		return $this->_transport;
+		return (count($this->accounts[self::SETTING_ACCOUNTS]) > 1);
 	}
 
 	/**
@@ -246,7 +270,7 @@ class Mailer_Core {
 	 *
 	 * @param $options
 	 */
-	protected function makeTransport($options=array())
+	protected function createTransport($options=array())
 	{
 		switch ($options['transport'])
 		{
@@ -271,19 +295,50 @@ class Mailer_Core {
 			break;
 		}
 
-		// Set default from, can be overwritten as needed.
+		// Set default from, can be overwritten as needed.  We only do it if there is not one set.
 		if(isset($options['from']) && is_array($options['from']))
 		{
 			$this->from = $options['from'];
 		}
 
-		// Set default reply to, can be overwritten as needed.
+		// Set default reply to, can be overwritten as needed.  We only do it if there is not one set.
 		if(isset($options['replyto']) && is_array($options['replyto']))
 		{
 			$this->replyto = $options['replyto'];
 		}
 
 		return $transport;
+	}
+
+	/**
+	 * Get the email account to attempt to send the email with.
+	 *
+	 * @param string $logic
+	 * @param array $accounts
+	 */
+	protected function findEmailAccount($logic, Array $accounts=null)
+	{
+		// We have multiple accounts.
+		if($this->hasMultipleEmailAccounts())
+		{
+			switch($logic)
+			{
+				case self::SETTING_LOGIC_TIMEOFDAY: // Change email accounts based on time of day.
+					$index = intval(date("H") / 24 * count($accounts));
+					break;
+
+				case self::SETTING_LOGIC_DEFAULT:
+				default:
+					$index = 0;
+					break;
+			}
+		}
+		else // We only have one account defined, easy enough.
+		{
+			$index = 0;
+		}
+
+		return $index;
 	}
 
 	/**
@@ -297,34 +352,81 @@ class Mailer_Core {
 		// Issued send command.
 		if(stristr($name, self::CMD_PREFIX_SEND))
 		{
+			// Figure out the custom method we need to call in the extending class.
 			$method = str_ireplace(self::CMD_PREFIX_SEND, '', $name);
 
-			// See if we have a valid method.
+			// See if we have a valid method in the extending class.
 			if(method_exists($this, $method))
 			{
-				// call the method
+				// Call the method in the extending class.
 				call_user_func_array(array($this, $method), $args);
 
-				//setup the message
-				$this->setup_message($method);
-
-				try {
-					//send the message
-					$this->send();
-
-					return $this->result;
-
-				} catch (Swift_TransportException $e) {
-
+				// Define the logic we are using.
+				if(isset($this->accounts[self::SETTING_LOGIC]) && in_array($this->accounts[self::SETTING_LOGIC], $this->valid_logic))
+				{
+					$logic = $this->accounts[self::SETTING_LOGIC];
+				}
+				else
+				{
+					$logic = self::SETTING_LOGIC_DEFAULT;
 				}
 
-				// Mail did not send.
-				// @todo: add some fallback stuff here for multiple accounts like attempt to resend email using
-				// another account within the same setting.  Possibly add default fallback, if not default.
+				// Define the accounts locally so we can manipulate them.
+				$accounts = $this->accounts[self::SETTING_ACCOUNTS];
 
-				throw new MailerException('Unable to send mail. Error: '.$e->getMessage(), $e->getCode());
-				return false;
+				// Now lets try to send the actual message.  We loop until we
+				// send or run out of account to try.
+				while(true)
+				{
+					try {
+						// Now lets pick the account to use.
+						$account_index = $this->findEmailAccount($logic, $accounts);
 
+						// Re-define the _mailer.
+						$this->_mailer = Swift_Mailer::newInstance(
+							$this->createTransport(
+								$accounts[$account_index]
+							)
+						);
+
+						// Setup the message so we can send it.
+						$this->setup_message($method);
+
+						// Try to send the message.
+						$this->send();
+
+						return $this->result;
+
+					} catch (Swift_TransportException $e) {
+
+						// Lets log
+						Kohana::$log->add(Kohana::ERROR, 'Unable to send mail. Error: '.$e->getMessage().' Code:'.$e->getCode());
+
+						// We failed to send the email so let' see if we can try again.
+						if(count($accounts) > 0)
+						{
+							// We need to change the logic because the current one is not working.
+							if($logic != self::SETTING_LOGIC_DEFAULT)
+							{
+								$logic = self::SETTING_LOGIC_DEFAULT;
+							}
+
+							// Lets remove the account index from the accounts
+							// array because it obviously doesnt work.
+							unset($accounts[$account_index]);
+
+							// Reset the accounts array.
+							$accounts = array_values($accounts);
+
+							continue; // Taking over the world.
+						}
+						else // We have no more accounts to test.
+						{
+							throw new MailerException('Unable to send email. Exhausted all defined accounts.', 10);
+							return false;
+						}
+					}
+				}
 			}
 			else // Invalid method
 			{
@@ -462,11 +564,11 @@ class Mailer_Core {
 		if (!$this->batch_send)
 		{
 			//Send the message
-			$this->result = $this->_mailer->send($this->message);
+			$this->result = (bool)$this->_mailer->send($this->message);
 		}
 		else
 		{
-			$this->result = $this->_mailer->batchSend($this->message);
+			$this->result = (bool)$this->_mailer->batchSend($this->message);
 		}
 
 		return $this->result;
@@ -535,7 +637,5 @@ class Mailer_Core {
 /**
  * Thrown when Mailer returns an exception.
  */
-class MailerException extends Exception
-{
-}
+class MailerException extends Exception {}
 ?>
