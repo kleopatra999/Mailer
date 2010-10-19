@@ -480,7 +480,7 @@ abstract class Mailer_Core {
 
 			if ($this->body_text !== null AND is_string($this->body_text))
 			{
-				$this->message->setPart($this->body_text, 'text/plain');
+				$this->message->addPart($this->body_text, 'text/plain');
 			}
 		}
 		else
