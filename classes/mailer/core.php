@@ -164,6 +164,8 @@ abstract class Mailer_Core {
 
 	protected $message = null;
 
+	protected $cache = null;
+
 	/**
 	 * Create a new instance of the proper extended Mailer class.
 	 *
@@ -402,6 +404,13 @@ abstract class Mailer_Core {
 						// Lets log
 						Kohana::$log->add(Kohana::ERROR, 'Unable to send mail. Error: '.$e->getMessage().' Code:'.$e->getCode());
 
+						// Lets remove the account index from the accounts
+						// array because it obviously doesnt work.
+						unset($accounts[$account_index]);
+
+						// Reset the accounts array.
+						$accounts = array_values($accounts);
+
 						// We failed to send the email so let' see if we can try again.
 						if(count($accounts) > 0)
 						{
@@ -410,13 +419,6 @@ abstract class Mailer_Core {
 							{
 								$logic = self::SETTING_LOGIC_DEFAULT;
 							}
-
-							// Lets remove the account index from the accounts
-							// array because it obviously doesnt work.
-							unset($accounts[$account_index]);
-
-							// Reset the accounts array.
-							$accounts = array_values($accounts);
 
 							continue; // Taking over the world.
 						}
