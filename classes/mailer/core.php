@@ -402,7 +402,7 @@ abstract class Mailer_Core {
 					} catch (Swift_TransportException $e) {
 
 						// Lets log
-						Kohana::$log->add(Kohana::ERROR, 'Unable to send mail. Error: '.$e->getMessage().' Code:'.$e->getCode());
+						Kohana::$log->add(Log::ERROR, 'Unable to send mail. Error: '.$e->getMessage().' Code:'.$e->getCode());
 
 						// Lets remove the account index from the accounts
 						// array because it obviously doesnt work.
