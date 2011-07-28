@@ -211,7 +211,7 @@ abstract class Mailer_Core {
 		}
 
 		// Load up the APPPATH/config/mailer.php account settings.
-		$this->config = Kohana::config('mailer');
+		$this->config = Kohana::$config->load('mailer');
 
 		// Find an account to use from the config file.
 		$this->findConfigAccount();
